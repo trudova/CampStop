@@ -24,9 +24,12 @@ const Review = require("./models/review");
 const userRoutes = require("./routes/users");
 const campgroundRoutes = require("./routes/campgrounds");
 const reviewRoutes = require("./routes/reviews");
-//const review = require("./models/review");
+const MongoStore = require('connect-mongo');
 
-mongoose.connect("mongodb://localhost:27017/camp-stop", { useNewUrlParser: true, useCreateIndex:true, useUnifiedTopology: true,useFindAndModify:false });
+// mongoose.connect("mongodb://localhost:27017/camp-stop", { useNewUrlParser: true, useCreateIndex:true, useUnifiedTopology: true,useFindAndModify:false });
+const dbUrl =process.env.DB_URL || "mongodb://localhost:27017/camp-stop";
+
+mongoose.connect(dbUrl, { useNewUrlParser: true, useCreateIndex:true, useUnifiedTopology: true, useFindAndModify:false });
 
 const db = mongoose.connection;
 db.on("error", console.error.bind(console, "connection error:"));
@@ -91,18 +94,33 @@ app.use(
     })
 );
 
-const sessionConfig ={
+
+
+
+const secret = process.env.SECRET || 'thisshouldbeabettersecret!'
+const store = MongoStore.create({mongoUrl: dbUrl,touchAfter: 24 * 3600,secret:secret  })
+
+store.on("error", function(e){
+    console.log("session store error ", e);
+})
+
+const sessionConfig = {
+    store:store,
     name: "session",
-    secret : "thisismysecret",
+    secret: secret,
     resave: false,
     saveUninitialized: true,
-    cookie:{
-        httpOnly:true,
+    cookie: {
+        httpOnly: true,
         // secure:true,
-        expires: Date.now()+ 1000*60*60*24*7,
-        maxAge:1000*60*60*24*7
+        expires: Date.now() + 1000 * 60 * 60 * 24 * 7,
+        maxAge: 1000 * 60 * 60 * 24 * 7
     }
 }
+
+
+
+
 app.use(session(sessionConfig));
 app.use(flash());
 
